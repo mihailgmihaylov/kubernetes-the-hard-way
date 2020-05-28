@@ -69,24 +69,24 @@ Generate the `admin` client certificate and private key:
 ```
 {
 
-cat > admin-csr.json <<EOF
+cat > admin-csr.json <<eof
 {
-  "CN": "admin",
+  "cn": "admin",
   "key": {
     "algo": "rsa",
     "size": 2048
   },
   "names": [
     {
-      "C": "US",
-      "L": "Portland",
-      "O": "system:masters",
-      "OU": "Kubernetes The Hard Way",
-      "ST": "Oregon"
+      "c": "us",
+      "l": "portland",
+      "o": "system:masters",
+      "ou": "kubernetes the hard way",
+      "st": "oregon"
     }
   ]
 }
-EOF
+eof
 
 cfssl gencert \
   -ca=ca.pem \
@@ -105,11 +105,54 @@ admin-key.pem
 admin.pem
 ```
 
+
+```
+{
+
+cat > kubectl-csr.json <<eof
+{
+  "cn": "kubectl",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "c": "us",
+      "l": "portland",
+      "o": "kubectl",
+      "ou": "kubernetes the hard way",
+      "st": "oregon"
+    }
+  ]
+}
+eof
+
+cfssl gencert \
+  -ca=ca.pem \
+  -ca-key=ca-key.pem \
+  -config=ca-config.json \
+  -profile=kubernetes \
+  kubectl-csr.json | cfssljson -bare kubectl
+
+}
+```
+
+Results:
+
+```
+kubectl-key.pem
+kubectl.pem
+```
+
+
 ### The Kubelet Client Certificates
 
 Kubernetes uses a [special-purpose authorization mode](https://kubernetes.io/docs/admin/authorization/node/) called Node Authorizer, that specifically authorizes API requests made by [Kubelets](https://kubernetes.io/docs/concepts/overview/components/#kubelet). In order to be authorized by the Node Authorizer, Kubelets must use a credential that identifies them as being in the `system:nodes` group, with a username of `system:node:<nodeName>`. In this section you will create a certificate for each Kubernetes worker node that meets the Node Authorizer requirements.
 
 Generate a certificate and private key for each Kubernetes worker node:
+
+For google cloud run:
 
 ```
 for instance in worker-0 worker-1 worker-2; do
@@ -148,6 +191,90 @@ cfssl gencert \
 done
 ```
 
+For local vagrant setup run:
+```
+for instance in master-0 master-1 master-2; do
+cat > ${instance}-csr.json <<EOF
+{
+  "CN": "system:node:${instance}",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "L": "Portland",
+      "O": "system:nodes",
+      "OU": "Kubernetes The Hard Way",
+      "ST": "Oregon"
+    }
+  ]
+}
+EOF
+
+IP=$(vagrant ssh ${instance} -c "/sbin/ifconfig eth0" \
+  | grep "inet addr" | tail -n 1 | egrep -o "[0-9\.]+" \
+  | head -n 1 2>&1)
+
+cfssl gencert \
+  -ca=ca.pem \
+  -ca-key=ca-key.pem \
+  -config=ca-config.json \
+  -hostname=${instance},${IP} \
+  -profile=kubernetes \
+  ${instance}-csr.json | cfssljson -bare ${instance}
+done
+```
+
+Results:
+
+```
+master-0-key.pem
+master-0.pem
+master-1-key.pem
+master-1.pem
+master-2-key.pem
+master-2.pem
+```
+
+
+For local vagrant setup run:
+```
+for instance in worker-0 worker-1 worker-2; do
+cat > ${instance}-csr.json <<EOF
+{
+  "CN": "system:node:${instance}",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "L": "Portland",
+      "O": "system:nodes",
+      "OU": "Kubernetes The Hard Way",
+      "ST": "Oregon"
+    }
+  ]
+}
+EOF
+
+IP=$(vagrant ssh ${instance} -c "/sbin/ifconfig eth0" \
+  | grep "inet addr" | tail -n 1 | egrep -o "[0-9\.]+" \
+  | head -n 1 2>&1)
+
+cfssl gencert \
+  -ca=ca.pem \
+  -ca-key=ca-key.pem \
+  -config=ca-config.json \
+  -hostname=${instance},${IP} \
+  -profile=kubernetes \
+  ${instance}-csr.json | cfssljson -bare ${instance}
+done
+```
+
 Results:
 
 ```
@@ -166,24 +293,24 @@ Generate the `kube-controller-manager` client certificate and private key:
 ```
 {
 
-cat > kube-controller-manager-csr.json <<EOF
+cat > kube-controller-manager-csr.json <<eof
 {
-  "CN": "system:kube-controller-manager",
+  "cn": "system:kube-controller-manager",
   "key": {
     "algo": "rsa",
     "size": 2048
   },
   "names": [
     {
-      "C": "US",
-      "L": "Portland",
-      "O": "system:kube-controller-manager",
-      "OU": "Kubernetes The Hard Way",
-      "ST": "Oregon"
+      "c": "us",
+      "l": "portland",
+      "o": "system:kube-controller-manager",
+      "ou": "kubernetes the hard way",
+      "st": "oregon"
     }
   ]
 }
-EOF
+eof
 
 cfssl gencert \
   -ca=ca.pem \
@@ -210,24 +337,24 @@ Generate the `kube-proxy` client certificate and private key:
 ```
 {
 
-cat > kube-proxy-csr.json <<EOF
+cat > kube-proxy-csr.json <<eof
 {
-  "CN": "system:kube-proxy",
+  "cn": "system:kube-proxy",
   "key": {
     "algo": "rsa",
     "size": 2048
   },
   "names": [
     {
-      "C": "US",
-      "L": "Portland",
-      "O": "system:node-proxier",
-      "OU": "Kubernetes The Hard Way",
-      "ST": "Oregon"
+      "c": "us",
+      "l": "portland",
+      "o": "system:node-proxier",
+      "ou": "kubernetes the hard way",
+      "st": "oregon"
     }
   ]
 }
-EOF
+eof
 
 cfssl gencert \
   -ca=ca.pem \
@@ -297,11 +424,28 @@ The `kubernetes-the-hard-way` static IP address will be included in the list of 
 Generate the Kubernetes API Server certificate and private key:
 
 ```
-{
-
-KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe kubernetes-the-hard-way \
+KUBERNETES_ADDRESS=$(gcloud compute addresses describe kubernetes-the-hard-way \
   --region $(gcloud config get-value compute/region) \
   --format 'value(address)')
+```
+
+In Vagrant:
+```
+KUBERNETES_ADDRESS_0=$(vagrant ssh master-0 -c "/sbin/ifconfig eth0" \
+  | grep "inet addr" | tail -n 1 | egrep -o "[0-9\.]+" \
+  | head -n 1 2>&1)
+
+KUBERNETES_ADDRESS_1=$(vagrant ssh master-1 -c "/sbin/ifconfig eth0" \
+  | grep "inet addr" | tail -n 1 | egrep -o "[0-9\.]+" \
+  | head -n 1 2>&1)
+
+KUBERNETES_ADDRESS_2=$(vagrant ssh master-2 -c "/sbin/ifconfig eth0" \
+  | grep "inet addr" | tail -n 1 | egrep -o "[0-9\.]+" \
+  | head -n 1 2>&1)
+```
+
+```
+{
 
 KUBERNETES_HOSTNAMES=kubernetes,kubernetes.default,kubernetes.default.svc,kubernetes.default.svc.cluster,kubernetes.svc.cluster.local
 
@@ -328,7 +472,7 @@ cfssl gencert \
   -ca=ca.pem \
   -ca-key=ca-key.pem \
   -config=ca-config.json \
-  -hostname=10.32.0.1,10.240.0.10,10.240.0.11,10.240.0.12,${KUBERNETES_PUBLIC_ADDRESS},127.0.0.1,${KUBERNETES_HOSTNAMES} \
+  -hostname=10.198.0.1,10.240.0.10,10.240.0.11,10.240.0.12,${KUBERNETES_ADDRESS_0},${KUBERNETES_ADDRESS_1},${KUBERNETES_ADDRESS_2},127.0.0.1,${KUBERNETES_HOSTNAMES} \
   -profile=kubernetes \
   kubernetes-csr.json | cfssljson -bare kubernetes
 
@@ -336,6 +480,9 @@ cfssl gencert \
 ```
 
 > The Kubernetes API server is automatically assigned the `kubernetes` internal dns name, which will be linked to the first IP address (`10.32.0.1`) from the address range (`10.32.0.0/24`) reserved for internal cluster services during the [control plane bootstrapping](08-bootstrapping-kubernetes-controllers.md#configure-the-kubernetes-api-server) lab.
+
+For Vagrant:
+> The Kubernetes API server is automatically assigned the `kubernetes` internal dns name, which will be linked to the first IP address (`10.198.0.1`) from the address range (`10.198.0.0/24`) reserved for internal cluster services during the [control plane bootstrapping](08-bootstrapping-kubernetes-controllers.md#configure-the-kubernetes-api-server) lab.
 
 Results:
 
@@ -407,6 +554,19 @@ for instance in controller-0 controller-1 controller-2; do
   gcloud compute scp ca.pem ca-key.pem kubernetes-key.pem kubernetes.pem \
     service-account-key.pem service-account.pem ${instance}:~/
 done
+```
+
+For vagrant:
+```
+mv ca* mountdirs/certificates
+mv admin* mountdirs/certificates
+mv worker-* mountdirs/certificates
+mv master-* mountdirs/certificates
+mv kube* mountdirs/certificates
+mv service-account* mountdirs/certificates
+cp static_kubelet_config.yaml mountdirs/kubelet_config_master-0.yaml
+cp static_kubelet_config.yaml mountdirs/kubelet_config_master-1.yaml
+cp static_kubelet_config.yaml mountdirs/kubelet_config_master-2.yaml
 ```
 
 > The `kube-proxy`, `kube-controller-manager`, `kube-scheduler`, and `kubelet` client certificates will be used to generate client authentication configuration files in the next lab.

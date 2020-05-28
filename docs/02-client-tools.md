@@ -30,6 +30,11 @@ Some OS X users may experience problems using the pre-built binaries in which ca
 brew install cfssl
 ```
 
+Also, you will need to install the proper sed for MacOS:
+```
+brew install gnu-sed
+```
+
 ### Linux
 
 ```

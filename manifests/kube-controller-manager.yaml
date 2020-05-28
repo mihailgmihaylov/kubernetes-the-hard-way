@@ -1,0 +1,136 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    k8s-app: kube-controller-manager
+  name: kube-controller-manager
+  namespace: kube-system
+spec:
+  priorityClassName: system-node-critical
+  containers:
+  - name: kube-controller-manager
+    image: k8s.gcr.io/kube-controller-manager:v1.15.3
+    command:
+    - /bin/sh
+    - -c
+    - mkfifo /tmp/pipe; (tee -a /var/log/kube-controller-manager.log < /tmp/pipe &
+      ) ; exec /usr/local/bin/kube-controller-manager
+      --allocate-node-cidrs
+      --attach-detach-reconcile-sync-period=30s
+      --address=0.0.0.0
+      --cluster-cidr=10.200.0.0/16
+      --cluster-name=kubernetes-the-hard-way
+      --cluster-signing-cert-file=/opt/kubernetes/certificates/ca.pem
+      --cluster-signing-key-file=/opt/kubernetes/certificates/ca-key.pem
+      --concurrent-deployment-syncs=20
+      --concurrent-endpoint-syncs=20
+      --concurrent-gc-syncs=40
+      --concurrent-namespace-syncs=20
+      --concurrent-replicaset-syncs=20
+      --concurrent-resource-quota-syncs=20
+      --concurrent-service-syncs=4
+      --concurrent-serviceaccount-token-syncs=20
+      --concurrent-ttl-after-finished-syncs=20
+      --concurrent_rc_syncs=20
+      --configure-cloud-routes=false
+      --deployment-controller-sync-period=15s
+      --kube-api-burst=500
+      --kube-api-qps=200
+      --kubeconfig=/opt/kubernetes/certificates/kube-controller-manager.kubeconfig
+      --leader-elect=true
+      --namespace-sync-period=2m
+      --node-monitor-grace-period=25s
+      --node-startup-grace-period=30s
+      --pod-eviction-timeout=2m
+      --root-ca-file=/opt/kubernetes/certificates/ca.pem
+      --service-account-private-key-file=/opt/kubernetes/certificates/service-account-key.pem
+      --service-cluster-ip-range=10.198.0.0/17
+      --use-service-account-credentials=true
+      --v=2 > /tmp/pipe 2>&1
+    # livenessProbe:
+    #   httpGet:
+    #     host: 127.0.0.1
+    #     path: /healthz
+    #     port: 10252
+    #   initialDelaySeconds: 15
+    #   timeoutSeconds: 15
+    resources:
+      requests:
+        cpu: 100m
+        memory: 100Mi
+      limits:
+        cpu: 200m
+        memory: 200Mi
+    volumeMounts:
+    - mountPath: /etc/ssl
+      name: etcssl
+      readOnly: true
+    - mountPath: /etc/pki/tls
+      name: etcpkitls
+      readOnly: true
+    - mountPath: /etc/pki/ca-trust
+      name: etcpkica-trust
+      readOnly: true
+    - mountPath: /usr/share/ssl
+      name: usrsharessl
+      readOnly: true
+    - mountPath: /usr/ssl
+      name: usrssl
+      readOnly: true
+    - mountPath: /usr/lib/ssl
+      name: usrlibssl
+      readOnly: true
+    - mountPath: /usr/local/openssl
+      name: usrlocalopenssl
+      readOnly: true
+    - mountPath: /var/ssl
+      name: varssl
+      readOnly: true
+    - mountPath: /etc/openssl
+      name: etcopenssl
+      readOnly: true
+    - mountPath: /opt/kubernetes
+      name: optkubernetes
+      readOnly: true
+    - mountPath: /var/log/kube-controller-manager.log
+      name: log
+      readOnly: true
+  hostNetwork: true
+  tolerations:
+  - key: CriticalAddonsOnly
+    operator: Exists
+  volumes:
+  - hostPath:
+      path: /etc/ssl
+    name: etcssl
+  - hostPath:
+      path: /etc/pki/tls
+    name: etcpkitls
+  - hostPath:
+      path: /etc/pki/ca-trust
+    name: etcpkica-trust
+  - hostPath:
+      path: /usr/share/ssl
+    name: usrsharessl
+  - hostPath:
+      path: /usr/ssl
+    name: usrssl
+  - hostPath:
+      path: /usr/lib/ssl
+    name: usrlibssl
+  - hostPath:
+      path: /usr/local/openssl
+    name: usrlocalopenssl
+  - hostPath:
+      path: /var/ssl
+    name: varssl
+  - hostPath:
+      path: /etc/openssl
+    name: etcopenssl
+  - hostPath:
+      path: /opt/kubernetes
+    name: optkubernetes
+  - hostPath:
+      path: /var/log/kube-controller-manager.log
+      type: FileOrCreate
+    name: log

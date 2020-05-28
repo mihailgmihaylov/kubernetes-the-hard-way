@@ -1,0 +1,19 @@
+apiVersion: kubeproxy.config.k8s.io/v1alpha1
+kind: KubeProxyConfiguration
+bindAddress: "0.0.0.0"
+clientConnection:
+  acceptContentTypes: ""
+  burst: 500
+  kubeconfig: /opt/kubernetes/certificates/kube-proxy.kubeconfig
+  qps: 200
+clusterCIDR: "10.200.0.0/16"
+configSyncPeriod: "15m0s"
+conntrack:
+  maxPerCore: 0
+  tcpEstablishedTimeout: "0"
+healthzBindAddress: "0.0.0.0:10256"
+iptables:
+  syncPeriod: "15s"
+metricsBindAddress: "0.0.0.0:10249"
+oomScoreAdj: -999
+

@@ -310,4 +310,75 @@ worker-1   Ready    <none>   15s   v1.15.3
 worker-2   Ready    <none>   15s   v1.15.3
 ```
 
+# For Vagrant
+
+```
+cp static_kubelet_config.yaml mountdirs/kubelet_config_worker-0.yaml
+cp static_kubelet_config.yaml mountdirs/kubelet_config_worker-1.yaml
+cp static_kubelet_config.yaml mountdirs/kubelet_config_worker-2.yaml
+
+gsed -i "s/NODE_NAME/worker-0/" mountdirs/kubelet_config_worker-0.yaml
+gsed -i "s/NODE_NAME/worker-1/" mountdirs/kubelet_config_worker-1.yaml
+gsed -i "s/NODE_NAME/worker-2/" mountdirs/kubelet_config_worker-2.yaml
+```
+
+### Download the packages, create the installation directories and install the binaries:
+
+```
+for instance in worker-0 worker-1 worker-2; do
+  vagrant ssh ${instance} -c "
+    wget \
+      https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.15.0/crictl-v1.15.0-linux-amd64.tar.gz \
+      https://github.com/opencontainers/runc/releases/download/v1.0.0-rc8/runc.amd64 \
+      https://github.com/containernetworking/plugins/releases/download/v0.8.2/cni-plugins-linux-amd64-v0.8.2.tgz \
+      https://storage.googleapis.com/kubernetes-release/release/v1.15.3/bin/linux/amd64/kubectl \
+      https://storage.googleapis.com/kubernetes-release/release/v1.15.3/bin/linux/amd64/kubelet
+
+    sudo mkdir -p \
+      /etc/cni/net.d \
+      /opt/cni/bin \
+      /var/lib/kubelet \
+      /var/lib/kubernetes \
+      /var/run/kubernetes
+
+    tar -xvf crictl-v1.15.0-linux-amd64.tar.gz
+    sudo tar -xvf cni-plugins-linux-amd64-v0.8.2.tgz -C /opt/cni/bin/
+    sudo mv runc.amd64 runc
+    chmod +x crictl kubectl kubelet runc 
+    sudo mv crictl kubectl kubelet runc /usr/local/bin/
+  "
+done
+```
+
+
+### Setup kube-proxy
+
+```
+cp manifests/kube-proxy.yaml mountdirs/manifests/worker-0
+cp manifests/kube-proxy.yaml mountdirs/manifests/worker-1
+cp manifests/kube-proxy.yaml mountdirs/manifests/worker-2
+
+KUBERNETES_ADDRESS_0=$(vagrant ssh master-0 -c "/sbin/ifconfig eth0" \
+  | grep "inet addr" | tail -n 1 | egrep -o "[0-9\.]+" \
+  | head -n 1 2>&1)
+
+KUBERNETES_ADDRESS_1=$(vagrant ssh master-1 -c "/sbin/ifconfig eth0" \
+  | grep "inet addr" | tail -n 1 | egrep -o "[0-9\.]+" \
+  | head -n 1 2>&1)
+
+KUBERNETES_ADDRESS_2=$(vagrant ssh master-2 -c "/sbin/ifconfig eth0" \
+  | grep "inet addr" | tail -n 1 | egrep -o "[0-9\.]+" \
+  | head -n 1 2>&1)
+
+gsed -i "s/KUBERNETES_ADDRESS/${KUBERNETES_ADDRESS_0}/" mountdirs/manifests/worker-0/kube-proxy.yaml
+gsed -i "s/KUBERNETES_ADDRESS/${KUBERNETES_ADDRESS_1}/" mountdirs/manifests/worker-1/kube-proxy.yaml
+gsed -i "s/KUBERNETES_ADDRESS/${KUBERNETES_ADDRESS_2}/" mountdirs/manifests/worker-2/kube-proxy.yaml
+```
+
+```
+vagrant halt worker-0 worker-1 worker-2
+vagrant up worker-0 worker-1 worker-2
+```
+
+
 Next: [Configuring kubectl for Remote Access](10-configuring-kubectl.md)

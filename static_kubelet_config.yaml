@@ -1,0 +1,45 @@
+kind: KubeletConfiguration
+apiVersion: kubelet.config.k8s.io/v1beta1
+authorization:
+  kubeletAuthorization:
+    kubeletAuthorizationMode: AlwaysDeny
+authentication:
+  x509:
+    clientCAFile: /opt/kubernetes/certificates/ca.pem
+  kubeletAuthtentication:
+    anonymous: false
+cgroupRoot: "/"
+clusterDNS: ["10.198.0.10"]
+clusterDomain: "cluster.local"
+enableDebuggingHandlers: true
+eventBurst: 200
+eventRecordQPS: 100
+evictionMaxPodGracePeriod: 30
+evictionHard:
+  memory.available: "100Mi"
+  nodefs.available: "10%"
+  nodefs.inodesFree: "5%"
+  imagefs.available: "10%"
+  imagefs.inodesFree: "5%"
+failSwapOn: false
+imageGCHighThresholdPercent: 70
+imageGCLowThresholdPercent: 50
+kubeAPIBurst: 200
+kubeAPIQPS: 100
+kubeReserved:
+  cpu: "100m"
+  memory: "150Mi"
+maxPods: 250
+nodeStatusUpdateFrequency: "5s"
+protectKernelDefaults: true
+readOnlyPort: 0
+registryPullQPS: 0
+registryBurst: 500
+runtimeRequestTimeout: "9m"
+serializeImagePulls: false
+staticPodPath: "/opt/kubernetes/manifests/NODE_NAME"
+tlsCertFile: /opt/kubernetes/certificates/NODE_NAME.pem
+tlsPrivateKeyFile: /opt/kubernetes/certificates/NODE_NAME-key.pem
+systemReserved:
+  cpu: "100m"
+  memory: "150Mi"

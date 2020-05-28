@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    k8s-app: kube-scheduler
+  name: kube-scheduler
+  namespace: kube-system
+spec:
+  priorityClassName: system-node-critical
+  containers:
+  - name: kube-scheduler
+    command:
+    - /bin/sh
+    - -c
+    - mkfifo /tmp/pipe; (tee -a /var/log/kube-scheduler.log < /tmp/pipe & ) ; exec
+      /usr/local/bin/kube-scheduler
+      --kubeconfig=/opt/kubernetes/certificates/kube-scheduler.kubeconfig
+      --leader-elect=true
+      --v=2 >/tmp/pipe 2>&1
+    image: k8s.gcr.io/kube-scheduler:v1.15.3
+    # livenessProbe:
+    #   httpGet:
+    #     host: 127.0.0.1
+    #     path: /healthz
+    #     port: 10251
+    #   initialDelaySeconds: 15
+    #   timeoutSeconds: 15
+    resources:
+      requests:
+        cpu: 100m
+        memory: 100Mi
+      limits:
+        cpu: 200m
+        memory: 200Mi
+    volumeMounts:
+    - mountPath: /opt/kubernetes
+      name: optkubernetes
+      readOnly: true
+    - mountPath: /var/log/kube-scheduler.log
+      name: logfile
+  hostNetwork: true
+  tolerations:
+  - key: CriticalAddonsOnly
+    operator: Exists
+  volumes:
+  - hostPath:
+      path: /opt/kubernetes
+    name: optkubernetes
+  - hostPath:
+      path: /var/log/kube-scheduler.log
+      type: FileOrCreate
+    name: logfile
+status: {}
