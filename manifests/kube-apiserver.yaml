@@ -1,0 +1,101 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    k8s-app: kube-apiserver
+  name: kube-apiserver
+  namespace: kube-system
+spec:
+  priorityClassName: system-node-critical
+  containers:
+  - name: kube-apiserver
+    image: k8s.gcr.io/kube-apiserver:v1.15.3
+    command:
+    - /bin/sh
+    - -c
+    - mkfifo /tmp/pipe; (tee -a /var/log/kube-apiserver.log < /tmp/pipe & ) ; exec
+      /usr/local/bin/kube-apiserver
+      --admission-control-config-file=/opt/kubernetes/kube_apiserver_admission_control_config.yaml
+      --allow-privileged=true
+      --anonymous-auth=false
+      --apiserver-count=3
+      --authorization-mode=Node,RBAC
+      --audit-log-path=/var/log/kube-apiserver-audit/audit.log
+      --audit-policy-file=/opt/kubernetes/kube_apiserver_audit_config.yaml
+      --audit-log-maxage=30
+      --audit-log-maxbackup=10
+      --audit-log-maxsize=100
+      --audit-log-format="json"
+      --audit-log-mode="batch"
+      --client-ca-file=/opt/kubernetes/certificates/ca.pem
+      --delete-collection-workers=5
+      --enable-admission-plugins=EventRateLimit,NamespaceLifecycle,LimitRanger,ServiceAccount,Priority,PersistentVolumeClaimResize,DefaultStorageClass,DefaultTolerationSeconds,MutatingAdmissionWebhook,ValidatingAdmissionWebhook,ResourceQuota,NodeRestriction,PodSecurityPolicy,TaintNodesByCondition
+      --encryption-provider-config=/opt/kubernetes/certificates/encryption-config.yaml
+      --etcd-cafile=/opt/kubernetes/certificates/ca.pem
+      --etcd-certfile=/opt/kubernetes/certificates/kubernetes.pem
+      --etcd-keyfile=/opt/kubernetes/certificates/kubernetes-key.pem
+      --etcd-servers=https://127.0.0.1:4001
+      --event-ttl=3h
+      --kubelet-certificate-authority=/opt/kubernetes/certificates/ca.pem
+      --kubelet-client-certificate=/opt/kubernetes/certificates/kubernetes.pem
+      --kubelet-client-key=/opt/kubernetes/certificates/kubernetes-key.pem
+      --max-mutating-requests-inflight=1000
+      --max-requests-inflight=2000
+      --profiling=false
+      --secure-port=443
+      --service-account-key-file=/opt/kubernetes/certificates/service-account.pem
+      --service-account-lookup="true"
+      --service-cluster-ip-range=10.198.0.0/17
+      --tls-cert-file=/opt/kubernetes/certificates/kubernetes.pem
+      --tls-private-key-file=/opt/kubernetes/certificates/kubernetes-key.pem
+      --v=2 > /tmp/pipe 2>&1
+    # livenessProbe:
+    #   httpGet:
+    #     host: 127.0.0.1
+    #     path: /healthz
+    #     port: 8080
+    #     scheme: HTTP
+    #   initialDelaySeconds: 15
+    #   timeoutSeconds: 3
+    # readinessProbe:
+    #   httpGet:
+    #     host: 127.0.0.1
+    #     path: /healthz/etcd
+    #     port: 8080
+    #     scheme: HTTP
+    #   initialDelaySeconds: 15
+    #   timeoutSeconds: 3
+    ports:
+    - containerPort: 443
+      hostPort: 443
+      name: https
+    resources:
+      requests:
+        cpu: 100m 
+        memory: 100Mi 
+      limits:
+        cpu: 1000m 
+        memory: 1024Mi 
+    volumeMounts:
+    - mountPath: /opt/kubernetes
+      name: optkubernetes
+      readOnly: true
+    - mountPath: /var/log/kube-apiserver.log
+      name: log
+    - mountPath: /var/log/kube-apiserver-audit
+      name: audit
+  hostNetwork: true
+  tolerations:
+  - key: CriticalAddonsOnly
+    operator: Exists
+  volumes:
+  - hostPath:
+      path: /opt/kubernetes
+    name: optkubernetes
+  - hostPath:
+      path: /var/log/kube-apiserver.log
+      type: FileOrCreate
+    name: log
+  - hostPath:
+      path: /var/log/kube-apiserver-audit
+    name: audit

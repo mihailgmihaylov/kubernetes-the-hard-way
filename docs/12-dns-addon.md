@@ -10,6 +10,12 @@ Deploy the `coredns` cluster add-on:
 kubectl apply -f https://storage.googleapis.com/kubernetes-the-hard-way/coredns.yaml
 ```
 
+For Vagrant:
+
+```
+kubectl --kubeconfig=${HOME}/.kube/vagrant-cluster apply -f coredns.yaml
+```
+
 > output
 
 ```
@@ -24,7 +30,7 @@ service/kube-dns created
 List the pods created by the `kube-dns` deployment:
 
 ```
-kubectl get pods -l k8s-app=kube-dns -n kube-system
+kubectl --kubeconfig=${HOME}/.kube/vagrant-cluster get pods -l k8s-app=coredns -n kube-system
 ```
 
 > output
@@ -40,13 +46,13 @@ coredns-699f8ddd77-gtcgb   1/1     Running   0          20s
 Create a `busybox` deployment:
 
 ```
-kubectl run --generator=run-pod/v1 busybox --image=busybox:1.28 --command -- sleep 3600
+kubectl --kubeconfig=${HOME}/.kube/vagrant-cluster run --generator=run-pod/v1 busybox --image=busybox:1.28 --command -- tail -f /etc/hosts
 ```
 
 List the pod created by the `busybox` deployment:
 
 ```
-kubectl get pods -l run=busybox
+kubectl --kubeconfig=${HOME}/.kube/vagrant-cluster get pods -l run=busybox
 ```
 
 > output

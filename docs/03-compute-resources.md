@@ -10,6 +10,31 @@ The Kubernetes [networking model](https://kubernetes.io/docs/concepts/cluster-ad
 
 > Setting up network policies is out of scope for this tutorial.
 
+## Local vagrant environment
+
+Set up a correct docker local network.
+The default location of the configuration file on Linux is /etc/docker/daemon.json. The --config-file flag can be used to specify a non-default location.
+
+The location of this file in MacOS is something like ``.
+However, you should not edit it manually but rather change it in the taskbar -> Preferences > Daemon > Advanced (or Preferences > Docker Engine) depending on your docker version and release type.
+
+Set the following settings:
+
+```
+{
+  "default-address-pools": [
+    {
+      "base": "10.240.0.0/16",
+      "size": 24
+    }
+  ]
+}
+```
+
+This will make sure you all have the same network IP range and it is compliant with this guide. Otherwise just change the 10.240.0.0/24 range whenever you see it in the guide.
+
+## Google Cloud
+
 ### Virtual Private Cloud Network
 
 In this section a dedicated [Virtual Private Cloud](https://cloud.google.com/compute/docs/networks-and-firewalls#networks) (VPC) network will be setup to host the Kubernetes cluster.

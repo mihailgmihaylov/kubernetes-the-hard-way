@@ -18,7 +18,7 @@ Print a hexdump of the `kubernetes-the-hard-way` secret stored in etcd:
 ```
 gcloud compute ssh controller-0 \
   --command "sudo ETCDCTL_API=3 etcdctl get \
-  --endpoints=https://127.0.0.1:2379 \
+  --endpoints=https://127.0.0.1:4001 \
   --cacert=/etc/etcd/ca.pem \
   --cert=/etc/etcd/kubernetes.pem \
   --key=/etc/etcd/kubernetes-key.pem\

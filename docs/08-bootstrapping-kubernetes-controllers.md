@@ -86,7 +86,7 @@ ExecStart=/usr/local/bin/kube-apiserver \\
   --etcd-cafile=/var/lib/kubernetes/ca.pem \\
   --etcd-certfile=/var/lib/kubernetes/kubernetes.pem \\
   --etcd-keyfile=/var/lib/kubernetes/kubernetes-key.pem \\
-  --etcd-servers=https://10.240.0.10:2379,https://10.240.0.11:2379,https://10.240.0.12:2379 \\
+  --etcd-servers=https://10.240.0.10:4001,https://10.240.0.11:4001,https://10.240.0.12:4001 \\
   --event-ttl=1h \\
   --encryption-provider-config=/var/lib/kubernetes/encryption-config.yaml \\
   --kubelet-certificate-authority=/var/lib/kubernetes/ca.pem \\
@@ -411,6 +411,169 @@ curl --cacert ca.pem https://${KUBERNETES_PUBLIC_ADDRESS}:6443/version
   "compiler": "gc",
   "platform": "linux/amd64"
 }
+```
+
+## For Vagrant
+
+### Configure the Kubernetes API Server
+
+Copy static configuration:
+
+```
+cp static_kube_apiserver_admission_control_config.yaml mountdirs/kube_apiserver_admission_control_config.yaml
+cp static_eventconfig.yaml mountdirs/eventconfig.yaml
+cp static_kube_apiserver_audit_config.yaml mountdirs/kube_apiserver_audit_config.yaml
+```
+
+To run the service actually put it in the kubelet static pods folder and it will be picked by kubelet
+Before that we need to tune the config a bit for our env:
+
+```
+KUBERNETES_ADDRESS_0=$(vagrant ssh master-0 -c "/sbin/ifconfig eth0" \
+  | grep "inet addr" | tail -n 1 | egrep -o "[0-9\.]+" \
+  | head -n 1 2>&1)
+
+KUBERNETES_ADDRESS_1=$(vagrant ssh master-1 -c "/sbin/ifconfig eth0" \
+  | grep "inet addr" | tail -n 1 | egrep -o "[0-9\.]+" \
+  | head -n 1 2>&1)
+
+KUBERNETES_ADDRESS_2=$(vagrant ssh master-2 -c "/sbin/ifconfig eth0" \
+  | grep "inet addr" | tail -n 1 | egrep -o "[0-9\.]+" \
+  | head -n 1 2>&1)
+```
+
+Finally, copy the manifest into the static pod folder:
+```
+cp manifests/kube-apiserver.yaml mountdirs/manifests/master-0/
+cp manifests/kube-apiserver.yaml mountdirs/manifests/master-1/
+cp manifests/kube-apiserver.yaml mountdirs/manifests/master-2/
+```
+
+### Run Kubernetes Controller Manager
+
+Just copy the manifest into the static pod folder:
+```
+cp manifests/kube-controller-manager.yaml mountdirs/manifests/master-0/
+cp manifests/kube-controller-manager.yaml mountdirs/manifests/master-1/
+cp manifests/kube-controller-manager.yaml mountdirs/manifests/master-2/
+```
+
+### Configure the Kubernetes Scheduler
+
+Just copy the manifest into the static pod folder:
+```
+cp manifests/kube-scheduler.yaml mountdirs/manifests/master-0/
+cp manifests/kube-scheduler.yaml mountdirs/manifests/master-1/
+cp manifests/kube-scheduler.yaml mountdirs/manifests/master-2/
+```
+
+### Verification
+
+Ssh to one of the masters:
+```
+vagrant ssh master-0
+```
+
+And run:
+```
+cd /opt/kubernetes/certificates
+kubectl get componentstatuses --kubeconfig /opt/kubernetes/certificates/admin.kubeconfig
+```
+
+Expected result:
+```
+NAME                 STATUS    MESSAGE              ERROR
+controller-manager   Healthy   ok
+scheduler            Healthy   ok
+etcd-0               Healthy   {"health": "true"}
+```
+
+### Setup local kubeconfig and permissions
+
+Retrieve the `kubernetes-the-hard-way` static IP address:
+
+Copy and modify the port of the kubeconfig from 433 to 40433
+```
+cp ${HOME}/Repo/kubernetes-the-hard-way/mountdirs/certificates/kubectl.kubeconfig ~/.kube/vagrant-cluster
+cp ${HOME}/Repo/kubernetes-the-hard-way/mountdirs/certificates/admin.kubeconfig ~/.kube/admin
+```
+
+Then you will need to grant permissions to the kubectl user (certificate) to be admin of the cluster:
+```
+cat <<EOF | kubectl --kubeconfig=${HOME}/.kube/admin apply -f -
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: kubectl
+  namespace: ""
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: kubectl
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: kubernetes
+  namespace: ""
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: kubernetes
+EOF
+```
+
+Test the connection:
+```
+kubectl --kubeconfig=${HOME}/.kube/test get nodes
+```
+
+## Setup kube-proxy
+
+```
+cp manifests/kube-proxy.yaml mountdirs/manifests/master-0
+cp manifests/kube-proxy.yaml mountdirs/manifests/master-1
+cp manifests/kube-proxy.yaml mountdirs/manifests/master-2
+cp static_kube_proxy_config.yaml mountdirs/kube_proxy_config.yaml
+
+KUBERNETES_ADDRESS_0=$(vagrant ssh master-0 -c "/sbin/ifconfig eth0" \
+  | grep "inet addr" | tail -n 1 | egrep -o "[0-9\.]+" \
+  | head -n 1 2>&1)
+KUBERNETES_ETCD_NAME_0=$(vagrant ssh master-0 -c "hostname -s")
+
+KUBERNETES_ADDRESS_1=$(vagrant ssh master-1 -c "/sbin/ifconfig eth0" \
+  | grep "inet addr" | tail -n 1 | egrep -o "[0-9\.]+" \
+  | head -n 1 2>&1)
+KUBERNETES_ETCD_NAME_1=$(vagrant ssh master-1 -c "hostname -s")
+
+KUBERNETES_ADDRESS_2=$(vagrant ssh master-2 -c "/sbin/ifconfig eth0" \
+  | grep "inet addr" | tail -n 1 | egrep -o "[0-9\.]+" \
+  | head -n 1 2>&1)
+
+gsed -i "s/KUBERNETES_ADDRESS/${KUBERNETES_ADDRESS_0}/" mountdirs/manifests/master-0/kube-proxy.yaml
+gsed -i "s/KUBERNETES_ADDRESS/${KUBERNETES_ADDRESS_1}/" mountdirs/manifests/master-1/kube-proxy.yaml
+gsed -i "s/KUBERNETES_ADDRESS/${KUBERNETES_ADDRESS_2}/" mountdirs/manifests/master-2/kube-proxy.yaml
+```
+
+## Setup the flannel networking
+
+Setup permissions for kubelet to create "mirror pods" in kubernetes for the static pods it creates on every node.
+Also setup the networking with flannel DaemonSet.
+
+```
+cp network.yaml mountdirs
+
+vagrant ssh master-0 -c "
+  kubectl --kubeconfig /opt/kubernetes/certificates/admin.kubeconfig apply -f /opt/kubernetes/network.yaml
+"
 ```
 
 Next: [Bootstrapping the Kubernetes Worker Nodes](09-bootstrapping-kubernetes-workers.md)
