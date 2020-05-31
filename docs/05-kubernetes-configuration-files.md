@@ -370,6 +370,8 @@ Results:
 admin.kubeconfig
 ```
 
+For vagrant
+
 ```
 {
   cd mountdirs/certificates

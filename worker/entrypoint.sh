@@ -9,9 +9,9 @@ sudo swapoff -a
 
 dockerd-entrypoint.sh &
 
-docker ps
-while [ $? != 0 ]
+until docker ps
 do
+  echo "Try again"
   sleep 3
 done
 

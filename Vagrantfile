@@ -25,7 +25,7 @@ Vagrant.configure(VAGRANT_API_VERSION) do |config|
 
   NODES.each do |node|
     config.vm.define(node) do |node_config|
-      config.vm.hostname=node
+      node_config.vm.hostname=node
       if node =~ /^master.*/
         node_config.vm.provider :docker do |d, override|
           d.build_dir = 'master'
